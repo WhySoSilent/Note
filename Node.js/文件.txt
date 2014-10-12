@@ -1,0 +1,124 @@
+文件
+---------------
+
+
+Node的很多文件API几乎是UNIX(POSIX)中对应文件API的翻版。例如：使用文件描述符的方式，文件描述符句柄在Node中也是一个整数，其中三个特殊的文件描述符,1:标准输入文件，2:标准输出文件，3:标准错误文件。一旦进程启动完毕，就能使用这些文件描述符了，它们其实并不对应实际的文件。
+Node中有一组流API，它们使得可以像处理网络流那样处理文件，虽然使用起来很方便，但他们只允许以连续的方式处理文件，当你需要更大的灵活性时，使用流API就行不通了。所以必须使用一些更底层的操作来对文件系统做处理。
+
+处理文件路径
+---------------
+可以用字符串来处理文件路径，但这样做会使得问题变得难以处理。Node中有一个path模块可以帮助你处理路径。
+
+规范化路径
+----
+var path = require('path');
+path.normalize('/foo/bar/baz/asdf/quux/..');
+// =>	'/foo/bar/baz/asdf'
+
+连接路径
+----
+path.join('/foo', 'bar', 'baz/asdf', 'quux', '..');
+// =>	'/foo/bar/baz/asdf'
+
+解析路径
+----
+path.resolve() 函数将多个路径解析为一个规范化的绝对路径，这些路径可以是文件，而且可以不必实际存在---即它不会利用底层的文件系统来尝试判断路径是否存在，而只是对路径字符串进行处理。
+
+path.resolve('/foo/bar', '.baz');
+// =>	'/foo/bar/baz'
+
+path.resolve('/foo/bar', '/tmp/file/');
+// =>	'/tmp/file'
+
+如果解析的结果不是绝对路径，那么path.resolve函数会将当前工作目录附加到解析结果的面前，例子:
+
+path.resolve('wwwroot', 'static_files/png/', '../gif/image.gif');
+// 如果当前工作目录是/home/myself/node/,那么将返回
+// => /home/myself/node/wwwroot/static_files/gif/image.gif
+
+查找两个绝对路径之间的相对路径
+----
+path.relative() 函数，可以确定如何从一个绝对路径跳转到另一个绝对路径
+
+path.relative('/data/orandea/test/aaa', '/data/orandea/impl/bbb');
+// => ../../impl/bbb
+
+提取路径的组成部分
+----
+//提取路径的目录部分
+path.dirname('/foo/bar/baz/asdf/quux.txt');		// => /foo/bar/baz/asdf
+
+//提取文件名
+path.basename('/foo/bar/baz/asdf/quux.txt');	// => quux.txt
+
+//提取扩展名
+path.extname('/a/b/index.html');		// => '.html'
+path.extname('/a/b/index');		// => ''
+path.extname('/a/b/.');		// => ''
+path.extname('/a/b/c.');		// => '.'
+
+
+fs模块
+------------------
+
+查询文件统计信息
+----
+var fs = require('fs');
+fs.stat('/etc/passwd', function(err, stats) {
+	if (err) { throw err; }
+	console.log(stats);
+	//传递来的stats上可以调用以下函数
+	stats.isFile();
+	stats.isDirectory();
+	ststs.isBlockDevice();	// 如果是块设备，返回true
+	stats.isCharacterDevice();	// 如果是字符设备，返回true
+	stats.isSymbolicLink();		//如果是符号链接，返回true
+	stats.isFifo();		//如果是FIFO,返回true
+	stats.isSocket();	//如果是套接字，返回true
+});
+
+
+打开文件
+----
+fs.open('/path', 'r', function(err, fd) {});
+
+第二个参数是标志位，表明文件以何种模式打开，参见UINX手册
+r 	:
+r+	:
+w 	:
+w+	:
+a 	:
+a+	:
+
+
+读取文件
+----
+文件一旦打开，就可以进行读取。读取之前，必须创建一个缓冲区来放置数据。缓冲区被传递到充满文件数据的fs.read函数
+
+// 例子
+var fs = require('fs');
+fs.open('./my_file.txt', 'r', function(err, fd) {
+	if (err) { throw err; }
+	var readBuffer = new Buffer(1024),
+			bufferOffset = 0,
+			bufferLength = readBuffer.length,
+			filePostion = 100;
+	fs.read(fd, readBuffer, bufferLength, filePostion, function read(err, readBytes) {
+		if (err) { throw err; }
+		console.log('just read ' + readBytes + ' bytes');
+		if (readBytes > 0) {
+			console.log(readBuffer.slice(0, readBytes));
+		}
+	});
+});
+
+写入文件
+----
+
+
+关闭文件
+----
+
+
+
+

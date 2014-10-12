@@ -1,0 +1,25 @@
+$http
+--------------------------
+
+$http实现的一个信用卡的例子
+----
+myAppModule.factory('CreditCard', ['$http', function($http) {
+	var baseUrl = '/user/123/card';
+	return {
+		get: function(cardId) {
+			return $http.get(baseUrl + '/' + cardId);
+		},
+		save: function(card) {
+			var url = card.id ? baseUrl + '/' + card.id : baseUrl;
+			return $http.post(url, card);
+		},
+		query: function() {
+			return $http.get(baseUrl);
+		},
+		charge: function(card) {
+			return $http.post(baseUrl + '/' + card.id, {params: { charge : true }});
+		}
+	}
+}]);
+
+ 

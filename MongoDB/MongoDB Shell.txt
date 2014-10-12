@@ -1,0 +1,49 @@
+MongoDB Shell
+-----------------
+
+基本管理
+----
+use _dbName_
+show dbs
+show collections
+db.stats()
+db._collName_.stats()
+show log global
+
+插入与查询
+----
+db.users.insert({username: 'Wang'})
+db.users.save({username: 'Zhang'})
+db.users.count()
+db.users.find()
+db.users.find({查询选择器})
+db.users.find({ num: { $gt : 20, $lt : 25 } })
+it
+
+更新文档
+----
+db.users.update({查询选择器}, { $set : { age: 32} })
+db.users.update({查询选择器}, { $unset : { age: 1} })
+db.users.update({查询选择器}, { $push : { 'favorites.movies' : '春光乍泄' } } , false, true)
+db.users.update({查询选择器}, { $addToSet : { 'favorites.movies' : '重庆森林' } } , false, true)
+
+删除数据
+----
+db.users.remove()
+db.users.remove({查询选择器})
+db.users.drop()
+
+创建索引并查询
+----
+db._commandName_.explain()
+db.numbers.getIndexes()
+db.numbers.ensureIndex({ num : 1 })
+
+
+
+命令工作原理
+----
+命令的共同点是，在实现上，他们都是对名为$cmd的特殊虚集合的查询
+如
+db.stats() === db.runCommand( { dbstats: 1 } )
+即，命令是由文档 { dbstats: 1 } 定义的

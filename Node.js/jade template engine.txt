@@ -1,0 +1,21 @@
+jade template engine
+--------------------
+
+code : layout.jade
+----
+doctype 5
+html
+	head
+		title Learn jade
+	body
+		h1 First page use jade
+		h3 Welcome back #{user.name}
+		hr
+		block body
+
+语法
+----
+jade使用的是缩进(默认两个空格，应避免使用tab)
+只需键入标签名，后面紧跟内容
+通过 #{ } 嵌入变量
+block关键字是嵌入其他视图到指定位置

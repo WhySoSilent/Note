@@ -1,0 +1,177 @@
+更新类型与选项
+---------------------------
+MongoDB支持针对性更新(使用一个或多个更新操作符来定义)与替换更新(用一个文档来替换)
+
+语法说明: 更新与查询的语法区别
+----
+基本上,更新操作符是前缀(如$addToSet)，而查询操作符通常是中缀(如$lte)
+>db.products.update({}, { $addToSet : { tags : 'green' } })
+>db.products.update({ price : { $lte : 10 } }, { $addToSet : { tags : 'cheap' } })
+
+
+多文档更新
+----
+默认情况下更新操作只会更新查询选择器匹配到的第一个文档。要更新匹配到的所有文档，需明确指定。
+在Shell里要实现这一点，可以将update方法的第四个参数设置为true
+
+//  为产品集合里面所有文档添加cheap标签
+> db.products.update({}, { $addToSet : { tags : 'cheap' } }, false, true )
+
+upsert
+----
+某项内容不存在时进行插入，存在时则进行更新,通过将update方法的第三个参数设置为true
+新文档的属性合并自``查询选择器``与``针对性更新的文档``
+
+// 在Shell中使用upsert的例子
+>db.products.update({ slug : 'hammer' }, { $addToSet : { tags : 'cheap' } }, true )
+
+// $inc用于upsert的例子，如果不存在_id为323的文档，会用该_id创建一个，文档中temp的值为2.73
+>db.readings.update({ _id : 324 }, { $inc : { temp : 2.73 } }, true )
+
+!! 注意upsert无法用于替换风格的更新操作
+!! upsert一次只能插入或更新一个文档(所以update方法没有第四个参数)。在需要原子性地更新文档，以及无法确定文档是否存在时，upsert能发挥巨大的作用
+
+
+更新操作符
+---------------------------
+
+标准更新操作符
+----
+最常用的操作符，几乎能用于任意数据类型
+$inc			递增或递减相应数值
+$set 			为文档中的特定键赋值，若键已存在其值会被覆盖，否则会创建一个新的键
+$unset		删除文档中特定的键。
+$rename		更改键名
+
+// 递增或递减示例
+>db.users.update({}, { $inc : { count : 1 } })
+>db.users.update({}, { $inc : { count : -1 } })
+>db.users.update({}, { $inc : { count : 3.14 } })
+
+// 更新
+>db.readings.update({ _id : 324 }, { $set : { temp : [100, 80] } })
+
+// 删除文档中的temp键
+>db.readings.update({ _id : 324 }, { $unset : { temp : 1 } })
+
+!! 在数组元素上使用点号下标来使用，其结果只是将元素的值置为null。要彻底删除某个数组元素，可以用$pull和$pop
+
+// 更改键名的示例
+>db.readings.update({ _id : 324 }, { $rename : { 'temp' : 'temperature' } })
+>db.readings.update({ _id : 324 }, { $rename : { 'temp.f' : 'temp.farenheit' } })
+
+
+数组更新操作符
+----
+$push 				为数组追加一个值
+$pushAll 			为数组追加一些值
+$addToSet 		为数组追加值,但是在要添加的值不存在时才执行添加操作
+$each					向数组中添加多个唯一的值，必须结合$each操作符来使用$addToSet
+$pop					从数组中删除元素，语法和$unset类似，即{ $pop : { 'elementToRemove' : 1 } }
+$pull 				作用与$pop类似，更高级在于:允许明确用值来指定要删除哪个数组元素，而不是位置
+$pullAll			提供一个要删除值的列表，从数组中删除元素
+
+// 为铲子添加新标签
+>db.products.update({ slug : 'shovel' }, { $push : { 'tags' : 'tools' } })
+
+// 为铲子添加多个标签
+>db.products.update({ slug : 'shovel' }, { $pushAll : { 'tags' : ['tools', 'dirt', 'garden'] } })
+
+// 为铲子添加tools标签，对于已经有了tools标签的铲子不会再添加了
+>db.products.update({ slug : 'shovel' }, { $addToSet : { 'tags' : 'tools' } })
+
+// 为铲子添加多个唯一的标签(仅当$each中的值不在tags里时才会添加)
+>db.products.update({ slug : 'shovel' }, { $addToSet : { 'tags' : { $each : ['tools', 'dirt', 'garden'] } } })
+
+// 数组里包含['tools', 'dirt', 'garden', 'steel'],下面的$pop会删除steel标签
+>db.products.update({ slug : 'shovel' }, { $pop : { 'tags' : 1 } })
+
+// 数组里包含['tools', 'dirt', 'garden', 'steel'],$pop接受-1会删除数组的第一个元素(tools标签)
+>db.products.update({ slug : 'shovel' }, { $pop : { 'tags' : -1 } })
+
+!! 无法返回$pop从数组中删除的值。尽管它的名字叫$pop，但其结果和你所熟知的栈式操作不太一样，请注意这点
+
+// 无需知道dirt标签在数组中的位置，来删除它
+>db.products.update({ slug : 'shovel' }, { $pull : { 'tags' : 'dirt' } })
+
+// 删除dirt和garden标签
+>db.products.update({ slug : 'shovel' }, { $pullAll : { 'tags' : ['dirt', 'garden'] } })
+
+
+位置更新
+----
+$			位置操作符允许更新数组里的子文档，我们可以在查询选择器中用点符号指明要修改的内容
+
+// 若没有示例，理解起来比较麻烦，此处假设有一个订单文档的一部分
+{
+	_id : '________',
+	line_items: [
+		{
+			_id : 'QW23ER45T',
+			sku : '9092',
+			quantity : 1
+		},
+		{
+			_id : 'QW23ER45T',
+			sku : '10027',
+			quantity : 2
+		}
+	]
+}
+
+// 想设置第二个明细条目的数量，把sku为10027的那条的数量设置为5，问题是你不清楚这个特定的子文档在line_items数序里的位置，甚至都不知道它是否存在
+query = { _id : 'QW23ER45T' , 'line_items.sku' : '10027' }
+update = { $set : { 'line_items.$.quantity' : 5 } }
+>db.orders.update(query, update)
+
+
+findAndModify命令
+---------------------------
+findAndModify命令的以下选项中，只有query以及update或remove是必选的(update和remove二选一)
+query 			文档查询选择器，默认为{}
+update 			描述更新的文档，默认为{}
+remove 			布尔值，为true时删除对象并返回，默认为false
+new					布尔值，为true时返回修改后的文档，默认为false
+sort				指定排序方向的文档，因为findAndModify一次只修改一个文档，sort选项能用来控制处理哪个文档。
+fields			通过该选项指定要返回字段的子集
+upsert 			布尔值，为true时将findAndModify当作upsert对待。如果文档不存在，则创建之
+
+
+删除
+---------------------------
+可以删除整个集合，也可以传递一个查询选择器，删除集合的子集
+
+// 删除全部评论
+>db.reviews.remove({})
+
+// 删除特定用户的评论
+>db.reviews.remove({ _id : 'QW23ER45T' })
+
+
+并发性、原子性与隔离性
+---------------------------
+$atomic			避免暂停
+
+自MongoDB v2.0起，锁策略非常粗放，靠一个全局读写锁来控制整个mongod实例(本书翻译过程中，MongoDB v2.2去掉了全局的写锁)。
+意味着任何时刻，数据库只允许存在一个写线程或多个读线程(两者不能并存)。
+实际情况是，这个锁策略还有一些并发优化措施:
+1. 对于那些还不在内存里的文档的读写，数据库会让步于其它操作，知道文档被载入内存
+2. 第二个优化是写锁让步。任何写操作都有可能耗时很久，而所有其它的读写操作在此期间都会被阻塞。所有的插入、更新和删除都要持有写锁。
+	 当前的优化方案是允许这些耗时很久的操作周期性的暂停，以便执行其它的读和写。在操作暂停时，它会自己停下来，释放锁，稍后再恢复。
+	 暂停和恢复通常发生在几毫秒内。
+
+!! 但在更新和删除文档时，这种暂停行为可能好坏掺半。比如要避免在其它操作发生前更新或删除有所有文档。在这些情况下，可以使用$atomic特殊选项来避免暂停。
+
+// 将所有评论的评分设为0(操作是隔离执行的，不会暂停，保证系统始终是一致的)
+>db.reviews.update({}, { $set : { rating : 0 }, false, true }, { $atomic : true })
+
+!! 如果使用$atomic的操作途中失败，并不会回滚。只有一半文档被更新，而另外一半还是保持原来的值
+
+
+更新性能说明
+---------------------------
+此处讨论到的注意事项适用于数据大小超过内存总数，或者写负载极重的情况。
+磁盘上的文档更新本质上分为三种:
+1. 只发送在单值修改并且整个BSON文档的大小不改变的情况
+2. 会改变文档的大小和结构
+3. 重写文档

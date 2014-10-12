@@ -1,0 +1,140 @@
+读写数据流
+--------------
+流是由几个Node对象实现的抽象概念。流的两个例子是TCP套接字、文件。
+创建或者获取流的方式取决于流的类型。
+另外，由于一个对象还可以具有其它一些特殊的熟悉或行为，所以不同类型的流具有差异。例如文件可读流还包含"路径"属性，而这一属性在其它类型的流中也许并不存在。
+
+使用可读流
+--------------
+可读流好像一个数据阀门。在创建或者获取后，可以对其进行控制。可以通过暂停和恢复来控制数据流动，可以在数据可用时得到通知，并且在流终止时你也会得到通知并能够关闭它。
+
+等待数据
+----
+流能以块为单位发送数据。通过监听"data"事件，每个流的块的到达会被通知。
+提交过来的数据是什么形式的，取决于流的编码，通过steam.setEncoding()指定。未指定编码会以字节缓冲区的原始形式递交，否则递交的是特定编码后的字符串。
+
+var readable_stream1 = ...
+readable_stream1.on('data', function(data) {
+	// data 是字节缓冲区
+	console.log(data);
+});
+
+var readable_stream2 = ...
+readable_stream2.setEncoding('utf8');
+readable_stream2.on('data', function() {
+	// data 是utf-8编码格式的字符串
+	console.log(data);
+});
+
+! 注意，由于utf8字符可能是多字节的，所以也许获取一个字符可能要在两个独立的data事件发生之后才可以。当流的编码格式设置为utf8时，流仅会在一个字符完整的情况下传递它。
+
+暂停与恢复
+----
+可读流像一个阀门，可以通过暂停流来阻止数据流动
+stream.pause();
+之后就不会再接收到data事件。
+stream.resume()  再次恢复
+
+注意:暂停流在不同的情况下会被解释成不同的行为。对一个文件流意味着停止从文件中读取数据，而对TCP套接字意味着不会再读取新的数据包，这会终止从其它终端来的数据包流。其它对象对pause的实现各不相同。
+
+了解何时终止
+----
+流会终止。结束时流会发射end事件，监听它就好了
+
+
+使用可写流
+------------------
+可以向可写流发送数据。可写流可能是一个文件、TCP套接字或者一个对象(用来输出被转换的数据，例如:压缩文件)
+
+写数据
+----
+通过向可写流传递缓冲区或者字符串，可以将其写入其中。
+var writable_stream = ...
+writable_stream.write('this is a UTF-8 string');
+writable_stream.write('7es34dg11s3d5ad240a8ef', 'base64');	// 传入指定编码的字符串
+
+var buf = new Buffer('this a buffer with some string');
+writable_stream.write(buf);
+
+一旦向流写入数据，Node可以立即将数据传递到核缓冲区中，如果此时没有核缓冲区，就会存储到一个队列中，队列位于内存中。可以通过观察stream.write()的返回值确定发生了什么，true为写到核缓冲区，false为内存队列。
+这样做即让你在调用时就知道缓冲区是否被立即刷新了，没有被刷新，你也立即知道了数据被存储在进程内存中了。稍后当流成功刷新挂起的缓冲区时，就会发射drain事件。
+
+等待流被清空
+----
+因为Node不会在I/O操作上产生阻塞，因此也不会在读或写命令上产生阻塞。正如你已经看到的那样，你会立即知道缓冲区是否被即使刷新了，而你可以监听drain事件，当被挂起的缓冲区成功刷新时通知你。
+
+writable_stream.on('data', function() {
+	// ...
+});
+
+
+避免慢客户端问题以及挽救服务器
+----------------
+当有进程读取数据，并将数据发送给另一个进程时，一般就会出现慢客户端问题。
+还是由于Node在进行I/O操作时不会产生阻塞，不会阻塞数据的读写操作，如果用write无法将数据写入核缓冲区，就会缓存。
+一般而言，如果既有数据生产者，又有数据消费者，并且数据生产者比数据消费者要快，就要缓存数据。要暂停数据产生者，直到消费者赶上来为止。
+
+规避慢客户端问题
+----
+大多情况下，可以通过暂停数据生产者来避免填满具有未刷新缓冲区的内存---可读流---以便让消费者的数据---可写流---不会被传入核缓冲区中。
+一个控制数据流动的例子:
+
+require('http').createServer(function(req, res) {
+	var rs = fs.createReadStream('/path/bigfile');
+
+	rs.on('data', function(data) {
+		if (!res.write(data)) {
+			rs.pause();	// 数据写入不及时，暂停文件流
+		}
+	});
+
+	res.on('drain', fucntion() {
+		rs.resume();	// 缓冲区刷新后，继续文件流输入
+	});
+
+	rs.on('end' function() {
+		res.end();
+	});
+}).listen(8080);
+
+应用stream.pipe()避免慢客户端问题
+----
+暂停可读流直到可写流赶上后恢复可读流的过程是一种循环模式，Node使用stream.pipe()命令实现这种模式。
+stream.pipe()命令是可读流接口的一部分---由传输源调用---并接受目标可写流作为其第一个参数。
+
+//用pipe命令实现上面的例子
+require('http').createServer(function(req, res) {
+	var rs = fs.createReadStream('/path/bigfile');
+	rs.pipe(res);
+}).listen(8080);
+
+默认情况下，end()会在可读流结束时，在可写流上被调用。为了避免这种情况，可以将end:false传入pipe()函数，作为其第二个参数options的属性。
+
+// 文件结束时追加字符串"And that's all, folks!"
+require('http').createServer(function(req, res) {
+	var rs = fs.createReadStream('/path/bigfile');
+	rs.pipe(res, { end : false });
+
+	rs.on('end', function() {
+		res.write("And that's all, folks!");
+		res.end();
+	});
+}).listen(8080);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+Object() 和它的实例
+-------------
+
+Object对象实例属性
+----
+- constructor
+
+Object对象实例方法
+----
+- hasOwnProperty()
+- isPrototypeOf()						指出对象(调用者)是否存在于另一个对象(传入值)的原型链中
+- propertyIsEnumerable()
+- toLocaleString()
+- toString()
+- valueOf()
+
+所有对象都继承自 Object.prototype
+----
+Object()构造函数在Javascript中是特殊的，因为它的prototype属性在原型链中是最后一个

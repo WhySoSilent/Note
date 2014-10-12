@@ -1,0 +1,21 @@
+Connect MongoDB
+------------------
+
+code
+----
+var mongodb = require('mongodb');
+var server = new mongodb.Server('127.0.0.1', 27017, { auto_reconnect : true , poolSize : 3 });
+var db = new mongodb.Db('docu', server)
+
+// 打开数据库连接
+db.open(function(err, client) {
+	if (err) throw err;
+	// 建立集合的快捷方式,app是Express中的对象
+	app.users = new mongodb.Collection(client, 'users');
+	// 然后，想干什么就干什么了
+	app.users.insert({ name: 'Wang' }, function (err, doc ) {
+		if (err) return next(err);
+		// ...
+	})
+});
+

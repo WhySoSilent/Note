@@ -1,0 +1,87 @@
+初见
+--------------
+声明变量、常亮时类型是可选的
+声明的同时 赋值的话,编译器自动推断类型
+值永远不会被隐式转换为其它类型
+
+更简单的把值转换成字符串的方法,使用\()来把一个值转换成字符串
+let apples = 3
+let oranges = 5
+let str = "I have \(apples + oranges) pieces of fruit."
+
+字典和数组
+----
+var list = ['a', 'b', 'c']
+list[1] = 'one'
+
+var options = [
+	'Malcolm' : 'captain',
+	'kaylee' : 'Mechanic'
+]
+options['Jayne'] = 'Public Relations'
+
+let emptyArray = String[]()
+let emptyDictionary = Dictionary<String, Float>()
+
+如果类型信息可以被推断出来,你可以用[]和[:]来创建空数组和空字典
+list = [] 	// 类型将被推断
+
+
+控制流
+----
+if switch		条件判断
+for-in	for-in	while	do-while	循环
+包裹条件和循环变量括号可以省略，但语句大括号是必须的
+
+if语句，条件必须是一个布尔表达式--- 像 if score { ... } 是错的
+
+函数和闭包
+----
+func			声明函数
+name:type	参数
+->				返回值
+->()			元组来返回多个值
+
+
+对象和类
+----
+class name : Father {
+	var a : Double
+	init(a:Double) {
+		self.a = a
+	}
+	override func b() -> Double {
+		return a * 2
+	}
+
+	var c : Double {
+		get {
+			return a * 3
+		}
+		set {
+			a = a + 1.0
+		}
+	}
+}
+
+枚举和结构体
+----
+enum 
+
+接口和扩展
+----
+protocal example {
+
+}
+
+class name : example {
+	
+}
+
+泛型
+----
+<Float>
+
+
+
+

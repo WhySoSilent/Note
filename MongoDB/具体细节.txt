@@ -1,0 +1,89 @@
+数据库
+------------------
+
+数据文件与空间分配
+----
+docu.0						64MB
+docu.1						128MB
+docu.ns						16MB
+mongod.lock				
+
+ns扩展名表示namespaces,数据库中的每个集合和索引都有自己的namespace,每个命名空间的元数据都存放在这个文件里,默认情况下ns文件固定大小为16MB,大约存储 24,000 个命名空间。即数据库中的索引和集合总数不能超过 24,000个。如果不够,可以使用 --nssize服务器选项让该文件变的更大一点。
+
+使用从0开始的扩展名为集合与索引分配空间,0文件初始64MB,之后继续分配更多的数据文件，其大小都是上一个已经分配文件的两倍，直到达到预分配文件大小的上线2GB。倾向于这种做法是为让数据尽可能连续存储。
+
+mongod.lock文件,其中存储了服务器的进程ID。 永远不要删除或者修改锁定文件，除非是在对非正常关闭的数据库进行修复。如果在启动mongod时弹出一个与锁定文件有关的错误消息，很可能是之前没有正常关闭，可能需要初始化一个恢复进程。
+
+stats命令
+----
+>db.stats()
+{
+	dataSize: 160192,
+	storageSize: 791296,
+	indexSize: 425984,
+	fileSize: 201326592
+}
+
+fileSize 标明为了该数据库分配的文件空间的总和，即简单的将数据库文件大小加起来
+dataSize 是数据库中BSON对象的实际大小
+storageSize 包含了为集合增长预留的额外空间和未分配的额外空间
+indexSize 数据库索引大小的总和
+
+
+文档序列化、类型和限制
+----------------------
+
+键名
+----
+要正确序列化，键名必须是合法的
+1. 不能以$开头
+2. 不能包含.字符
+3. 除结尾处外不能包含null字节
+
+javascript 与 BSON 格式映射
+----
+MongoDB类型							Javascript类型		备注/例子
+
+JSON数组								Array[1,2,3]			[1,2,3]
+String									String						UTF8编码
+Boolean									Boolean						true, false
+Integer									Number 						MongoDB支持32-64bit数字，而js的Number是64bitfloat,
+																					驱动会依次尝试将数值转换为32bit/64bit/Long型。
+Interger								Long Class				支持64bit interger
+Float										Number
+Float										Double Class
+Date 										Date
+Regular expression			RegExp
+Null										Null
+Object									Object
+Object id 							ObjectID Class		表示MongoDB id 的特殊类
+Binary data 						Binary Class			存储二进制数据类型
+												Code Class				存储Javascript函数和方法
+												DbRef Class				存储对另一个文档的引用
+												Symbol Class 			描述符号(对于符号语言不仅是Javascript)
+
+
+
+
+字符串
+----
+所有字符串都必须编码为UTF-8
+
+数字
+----
+BSON规定了三种数字类型:	double 、int 、long .
+在动态语言里面序列化``整数``时，驱动会自己决定序列化为 int 还是 long .
+只有一种情况需要显式的决定数字类型,那就是通过 Javascript Shell 插入数字数据时。 Javascript 天生只支持一种数字类型 Number， 它等同于IEEE的双精度浮点数。因此，如果希望在Shell里将一个数字保存为整数,需要使用 NumberLong() 或 NumberInt() 显式指定.
+
+db.numbers.save({ n : 5 })
+db.numbers.save({ n : NumberLong(5) })
+
+另一个问题是缺乏对小数的支持。这意味着在MongoDB中保存货币值时需要使用整数类型,并且以美分为单位来保存货币值。
+
+日期时间
+----
+BSON的日期时间类型，用带符号的64位整数来标识Unix epoch毫秒数。( Unix epoch 是从1970/1/1日午夜开始的协调世界时) 采用的时间格式是UTC。
+
+在Javascript中创建日期，牢记Javascript里面的月份是从0开始的。 new Date(1989, 8, 16) 创建1989年9月16日
+
+

@@ -1,0 +1,96 @@
+外部进程
+---------------
+Node允许创建进程，并将这些进程作为子进程。子进程和父进程能够进行双向通信，并且在一点程度上，父进程可以监视和控制子进程。
+
+让Node进行CPU密集型任务可能会阻塞事件循环，进而降低程序的响应能力。替代办法是，将这些任务分配给另一个进程处理，从而释放事件循环。另一种要使用子进程的情况是执行一个外部命令。
+
+执行外部命令
+----
+var child_process = require('child_process').exec;
+exec('ls', function(err, stdout, stderr) {
+	// err	:		Error类的一个实例
+	// stdout	:	命令的输出信息 -- 如果第一个参数不包含错误的话
+	// stderr	:	命令的错误输出信息
+});
+
+另外接受一个包含若干配置选项的可选参数，放在回调函数之前传入
+var options = {
+	timeout : 10000,
+	killSignal : 'SIGKILL'
+}
+exec('cat *.js | wc -l', options, function(err, stdout, stderr) { // ... });
+
+可用的选项包括以下:
+cwd				:
+encoding	:	子进程输出所使用的编码格式，默认utf8
+timeout		: 指令执行的超时时间，单位毫秒。默认为0，一直等下去
+maxbuffer	: 指定stdout和stderr流的最大容量，单位字节，超过子进程就会终止。默认200*1024字节
+killSignal: 如果超市或者超过输出缓存容量，该信号就会被发送到子进程。默认SIGTERM
+evn				: 传递给子进程的环境变量，默认值是null，这意味着子进程会继承父进程的环境变量。
+
+
+生成子进程
+----
+child_process.exec()启动外部命令简单，但有缺点:
+1. 除了命令行参数和环境变量外，exec()函数不允许于子进程通讯
+2. 子进程的输出是被缓存的，结果是无法对齐进行操作，它可能会耗尽内存
+
+child_process模块允许进行更精细的控制，一旦启动了一个新的子进程，Node就创建了一个双向通信通道。
+
+创建子进程
+----
+var spawn = require('child_process').spawn;
+var child = spawn('tail', ['-f','/var/log/system.log']);
+
+spawn函数会返回一个ChildProcess对象，该对象是一个句柄，封装了对实际进程的访问。
+
+监听子进程的输出数据
+----
+任何一个子进程句柄都有一个属性stdout，它以流的形式表示子进程的标准输出信息，然后可以在这个流上绑定事件，就如同说"对于从子进程输出中获取的每个数据块，都要调用回调函数"。
+
+//将子进程的输出打印至控制台
+child.stdout.on('data', function(data) {
+	console.log('tail output: ' + data);
+});
+
+类似的，属性stderr以流的形式表示子进程的标准错误信息。
+
+向子进程发送数据
+----
+父进程向子进程的标准输入流中写入数据，这相当于向子进程发送数据，标准输入流是用childProcess.stdin属性表示的。
+子进程也可以使用process.stdin流来监听数据，但是注意，首先得恢复流，因为在默认情况下它处于暂停状态。
+
+当子进程退出时获得通知
+----
+子进程退出时，会在父进程上触发一个事件，监听如下:
+var spawn = require('child_process').spawn;
+var child = spawn('ls', ['-la']);
+child.on('exit', function(code, signal) {
+	// code 	是退出码，程序运行结束时的返回
+	// signal 信号，如果进程是被一个信号终止而非正常退出
+	if (code) {
+		console.log('Child process terminated with code ' + code);
+	}
+	else {
+		if (signal) {
+			console.log('Child process terminated because of signal SIGTERM')；
+		}
+	}
+});
+
+向进程发送信号并终止进程
+----
+信号是父进程和子进程进行通信的一种简单方式，甚至可以用它来终止子进程。
+不同的信号代码具有不同的含义。如果进程收到一个它不知如何处理的信号，它就会终止。一些信号可以由子进程处理，而另一些信号却只能由操作系统处理。
+
+child.kill();		// 向子进程发送一个信号，默认发送的是SIGTERM信号
+child.kill('SIGUSE');		// 传递一个唯一的参数，以此发送特定的信号
+
+注意尽管方法名是kill，但是发送的信号却不一定会终止进程。如果由子进程来处理该信号的话，那么该信号的默认行为就被重写。在Node中，子进程可以定义一个信号处理程序来重写信号，如下:
+process.on('SIGUSE2', function() {
+	console.log('Got a SIGUSR2 signal');
+});		// 通过这样处理该信号，进程在收到该信号后简单输出一个语句，而并不终止
+通过这种机制，设计一个简单的方法来和子进程通信，甚至控制子进程，虽然不像标准输出流那样功能丰富，但是却简单得多。
+SIGKILL 和 SIGSTOP是由操作系统处理的特殊信号，并且进程不能重写其默认行为，即使为这两个信号定义了处理程序，它们也会终止进程。
+
+

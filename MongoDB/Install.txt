@@ -1,0 +1,43 @@
+Install and Configiration on Windows
+-------------------------
+
+1. cd to
+----
+C:\Program Files\MongoDB 2.6 Standard\bin>
+
+2. run as Admin
+----
+mongod.exe --install --logpath=E:\WEB_DEV\MongoData\log.txt --dbpath=E:\WEB_DEV\MongoData\DB
+--install	安装为服务器
+--logpath	日志文件的路径,log.txt是在上一步建立好的文件
+--dbpath	据库文件的存放路径，DB文件夹在上一步骤已经创建好
+
+3. start server
+----
+net start mongodb
+默认端口是 27017
+
+4. run mongodb shell (should added bin\ to system PATH)
+----
+mongo
+
+
+Install and Configiration on Mac
+-------------------------
+
+1. download the package and moved to /Applications
+
+2. add bin/ to PATH
+----
+export PATH=/Applications/MongoDB/bin:$PATH
+
+3. create date directory
+----
+mkdir -p /Applications/MongoDB/DB
+
+4. ensure permissions for the date directory
+----
+
+5. Run mongodb in Shell
+----
+mongod --dbpath /Applications/MongoDB/DB

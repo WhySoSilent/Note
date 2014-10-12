@@ -1,0 +1,21 @@
+Install & run
+------------------
+
+install
+----
+1. download .tar.gz package
+2. unpackage & cd redis-2.6.16
+3. $ make
+4. $ sudo make install
+
+then, will install to /usr/local/bin
+
+run
+----
+$ redis-server <configFile path>
+$ redis-cli	// run a client connectiond to redis server
+
+shutdown
+----
+$ redis-cli
+redis 127.0.0.1:6379> SHUTDOWN

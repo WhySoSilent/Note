@@ -1,0 +1,61 @@
+二进制处理
+------------------
+最初Javascript不善于处理二进制数据，js中没有字节类型，也没有结构化类型，甚至没有字节数组类型...
+早期，Node通过将每个字节编码为文本自负来处理二进制数据，早已证明这种方法...
+后来，Node引入了二级只缓冲区实现。该实现以Buffer伪类中的Javascript API形式暴露给外界。
+
+!	Buffer类的特别之处之一是，数据占用的内存并不是分配在Javascript VM内存堆中，而是占据一个不会被修改的永久内存地址。
+
+创建
+----
+new Buffer('Hello world!');		//以UTF-8编码格式的字符串创建缓冲区
+new Buffer('8b76fde713ce', 'base64');		//指定编码格式的字符串来创建缓冲区
+new Buffer(1024);		//长度为1024字节的缓冲区
+
+
+ascii	--	ASCII 	适用于ASCII字符集
+utf-8 --  UTF-8 	默认
+base64 --  Base64 	...
+
+
+
+获取和设置数据
+----
+
+var buf = new Buffer('my buffer content');
+buf[10];		// -> 99
+
+var buf = new Buffer(1024);
+buf[5];			// -> 5 (初始化的缓冲区内容是随机值，而非0)
+
+buf[9] = 125;	// 将100位置设置为125
+
+var buf = new Buffer(1024);
+buf.length;		// -> 2014
+
+
+切分缓冲区
+----
+注意切分只是引用父缓冲区中的一段，引用到的内存地址是相同的
+
+var buf = new Buffer(1024);
+var smallBuf = buf.slice(8, 19);
+
+复制缓冲区
+----
+var buf1 = new Buffer('this is the content of my buffer');
+var buf2 = new Buffer（11）;
+
+var targetStart = 0;
+var sourceStart = 8;
+var sourceEnd = 19;
+buf1.copy(buf2, targetStart, sourceStart, sourceEnd);
+
+缓冲区解码
+----
+var str = buf.toString();		// 转换成(编码为)一个UTF-8格式的字符串
+
+// 将UTF-8编码格式的字符串转换成base64编码的字符串
+var utf8String = 'my string';
+var buf = new Buffer(utf8String);
+var base64String = buf.toString('base64');

@@ -1,0 +1,84 @@
+V8 中的Javascript
+--------------------------
+
+Object#keys
+----
+v8中获取所有对象上的自有键
+var a = { a : 1 , b : 2 }
+Object.keys(a);	// ['a', 'b']
+
+Array#isArray
+----
+准确告知是否数组
+Array.isArray([]);	// true
+Array.isArray({});	// false
+
+数组方法
+----
+// 遍历数组
+[1, 2, 3].forEach(function(i) {
+	console.log(i);
+});
+
+// 过滤数组
+[1, 2, 3].filter(function(i) {
+	return i < 3;
+});		// --> [1, 2]
+
+// 改变数组
+[1, 2, 3].map(function(i) {
+	return i * 2;
+});		// --> [2, 4, 6]
+
+// reduce 、reduceRight 、 lastIndexOf 等等
+
+
+
+
+字符串方法
+----
+.trim()			移除字符串首末空格
+
+' Wang yanyun   '.trim();		// 'Wang yanyun'
+
+JSON
+----
+JSON.stringify			解码对象为字符串
+JSON.parse					编码字符串为对象
+
+Function#bind
+----
+允许改变对this的引用
+function a () {}
+var b = a.bind({ hello : 'world' });
+
+Function#name
+----
+为了方便内部的堆栈追踪，v8支持了非标准的函数属性名.
+var a = function Woot() {}
+a.name == 'Woot';		// true
+
+__proto__
+----
+__proto__ 属性使得定义继承链更加容易,如下面两个
+
+function Animal() {}
+function Persion() {}
+Persion.prototype.__proto__ = Animal.prototype;
+
+存取器
+----
+__defineGetter__
+__defineSetter__
+
+可以通过调用方法来定义属性.
+
+// 为所有Date对象定义一个称为ago的属性
+Date.prototype.__definedGetter__('ago', function() {
+	return this.getTime().toPrettyDate();
+	// 假设toPrettyDate方法的逻辑返回一个更加直观的时间描述
+})
+
+// 简单的访问ago属性即可。访问属性实际上还会调用定义的函数，此过程透明了.
+var a = new Date();
+a.ago;		// 2 hours ago

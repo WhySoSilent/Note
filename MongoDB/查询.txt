@@ -1,0 +1,229 @@
+查询方法
+--------------------
+find							返回查询到的所有文档指示
+findOne						返回查询到的第一个文档
+findAndRemove			找到查询的文档并删除
+findAndModify			找到查询的文档并进行操作
+
+查询选择器
+--------------------
+
+匹配选择器
+----
+
+范围查询
+----
+$lt
+$lte
+$gt
+$gte
+
+>db.users.find({ age : { $gte : 0, $lte : 3 } })
+
+集合操作符号
+----
+$in			如果给定的列表中的任意的一个值，匹配了搜索的键，返回文档
+$all		当搜索键与每个给定元素都匹配时，才返回文档
+$nin		仅在与给定元素都不匹配的时才返回该文档
+接受一到多个值的列表，将其作为谓词。
+
+// 查找所有属于食品、玩具或者衣服的商品
+>db.products.find({ mian_cat : { $in : ["food", "toys", "cloth"] } })
+
+// 查找所有不是黑色或蓝色的产品
+>db.products.find({ details.color : { $nin : ["black", "blue"] } })
+
+// 查找所有标记为gift和garden的产品
+>db.products.find({ tags : { $all : ["gift", "garden"] } })
+
+!! 牢记 $in 和 $all 能利用索引,但 $nin 不能。
+
+布尔操作符
+----
+$ne				不等于操作符 (无法利用索引)
+$not			不同于$ne匹配特定值以外的所有值,$not则是对另一个操作符或正则表达式查询的结果求反
+$or				表示两个不同键对于的值的逻辑关系。其中重要的一点是:如果可能的值限定在同一个键里,用$in代替
+$and			只有在不能简单的表示AND关系时才应使用$and
+$exists		查询包含特定键的文档
+
+// 查找所有由Apple成产并且没有Mac标签的产品
+>db.prodocts.find({ 'ditals.manufacturer' : 'Apple' , tags : { $ne : "Mac" } })
+
+// 查询所有姓氏不是B打头的用户
+>db.users.find({ 'last_name' : { $not : /^B/ } })
+
+// 查找所有蓝色的或者是由Apple生产的产品
+>db.products.find({ $or : [{ "ditails.color" : "blue" }, { "ditails.manufacturer" : "Apple"}] })
+
+// 查询所有标记有gift或holiday, 同时还有 gardening或landscaping的产品
+	 (符合不能简单的表示AND关系的情况,表示该查询的唯一途径是关联两个$in查询)
+>db.products.find({ $and : [
+	{ tags : { $in : ["gift", "holiday"] } },
+	{ tags : { $in : ["gardening", "landscaping"] } }
+	] })
+
+// 找出未定义颜色的产品
+>db.products.find({ 'ditails.color' : { $exists: true } })
+>db.products.find({ 'ditails.color' : null })
+
+// 找出定义了颜色的产品
+>db.products.find({ 'ditails.color' : { $exists: true } })
+>db.products.find({ 'ditails.color' : { $ne : null } })
+
+
+!! $ne 不能利用索引,所以实际中最好和其他操作符结合使用,像上面示例中那样。否则查询效率低下。
+!! 使用 $not 前，请记住大多数查询操作符都已经有否定形式了($in 和 $nin , $gt 和 $lte 等), $not 不应该和他们搭配使用。当你所用的操作符或正则表达式没有否定形式时，才应该使用$not
+!! $or接受一个查询选择器数组，每个选择器的复杂度随意,而且可以包含其它查询操作符($or除外)
+!! $and接受一个查询选择器数组，对于包含多个键的查询选择器，会对条件进行与运算
+!! 用$exists检查存在性，有另外一种几乎等价的检查方法: 用 null 来匹配属性
+
+匹配子文档
+----
+
+// 匹配子文档的单个属性
+>db.products.find({ "details.manufacturer.id" : 432 })
+
+// 匹配整个对象 查询GOOG于2010年10月5日的股票价格
+>db.products.find({ _id : { sym : "GOOG", date : 20101005 } })
+
+!! 一定要注意，像这样匹配整个对象的查询会执行严格的字节比较,也就是说键的顺序很重要,更不用说键的数量和内容了
+!! 注意并非所有语言驱动的文档表述都是会保留文档的键的顺序的。一定要检查正在使用的语言是否支持有序字典。如果不支持的话，相应的驱动会提供一个有序的替代品
+
+数组
+----
+.							在需要对数组查询拥有更多掌控时，可以使用点符号来查询数组特定位置上的值。
+$elemMatch		需要匹配子文档中的多个属性时使用(.符号在查询子对象数组中的多个属性时会带来歧义)
+$size					根据数组大小进行查询
+
+// 只匹配产品的第一个标签为gift的产品
+>db.products.find({ 'tags.0' : "gift" })
+
+// 找到所有首选送货地址在纽约的用户(约定第0个元素始终是首选送货地址)
+>db.users.find({ 'addresses.0.state' : "NY" })
+
+// 找出家庭地址在纽约的用户列表
+>db.users.find({ addresses : { $elemMatch : { type : 'home' , state : 'NY' } } })
+>[而不是] db.users.find({ 'addresses.type' : 'home' , 'addresses.state' : 'NY' })
+  问题在于所引用的字段并不局限于单个地址文档，而我们实际是希望type和state这两个字段应用在同一个地址文档上
+
+// 找出带有三个地址的用户
+>db.users.find({ addresses : { $size : 3 } })
+
+!! 本书编写时(MongoDB shell version : 1.8.2 ), $size 操作符是不使用索引的,而且仅限于精确匹配(不能指定数组大小范围)
+
+Javascript
+----
+$where		使用javascript表达式描述匹配条件,在上下文中this指向当前文档
+
+// 以下两条使用$where的查询等价,第二个是简化形式
+>db.reviews.find({ $where : "function(){ return this.helpful_votes > 3 ; }" })
+>db.reviews.find({ $where : "this.helpful_votes > 3" })
+
+!! 问题是Javascript表达式无法使用索引,由于必须在解释器上下文中运算,会带来额外的大量开销。出于这些原因,只应该在无法通过标准查询语言表示查询是使用。如果确实有需要,请尝试为其带上至少一个标准查询操作符。标准查询操作符可以缩小结果集,减少必须加载到JS上下文里的文档
+!! 除了要识别出额外的性能开销,还要意识到注入攻击的可能,虽然无法通过这种方式修改或删除数据,但却能获得敏感数据
+
+// 查询特点用户的评论,并且至返回标准化评分大于3的记录(总之要稍微计算一下的情况)
+>db.reviews.find({ user_id : "QW23ER45T", $where: "(this.rating * .92 ) > 3" })
+
+正则表达式
+----
+$regex 			环境中不支持原生的正则表达式时使用
+$options 		环境中不支持原生的正则表达式时使用
+
+MongoDB编译时使用了PCRE,它支持大量的正则表达式
+!! 除了前缀查询，正则表达式都用不上索引。因此建议在使用时和Javascript表达式一样,结合至少一个其它查询项.
+!! 在正则表达式中使用了忽略大小写的选项就无法在查询中使用索引,就算是在前缀匹配时也是如此.
+
+// 查询指定用户的包含best或worst文字的评论
+>db.reviews.find({ user_id : "QW23ER45T", text : /best|worst/i })
+
+!! 这是在所使用的语言拥有原生的正则表达式的情况下使用原生正则表达式对象执行的查询,如果环境中不支持原生的正则表达式,可以使用特殊的$regex和$options操作符
+
+// 在Shell中通过$regex和$options操作符来查询指定用户的包含best或worst文字的评论
+>db.reviews.find({ user_id : "QW23ER45T", text : { $regex : "best|worst" , $options : "i" } })
+
+其它查询操作符
+----
+$mod 		查询能按指定取模操作的文档,无法使用索引
+$type 	根据BSON类型来匹配
+
+// 查询所有小计除以3以后余0的文档
+db.orders.find({ subtotal : { $mod : [3, 0] } })
+
+// 找出所有以字符串形式保存ID的文档
+db.users.find({ _id : { $type : 2 } })
+
+
+查询选项
+------------------------
+在发起查询时，有多种查询选项可供选择，它们能进一步约束结果集。
+
+投影
+----
+$slice		返回保存在数组里某个范围的值
+
+在查询结果集的文档中,使用投影来选择字段的子集进行返回,这能最小化网络延时和反序列化的开销。
+通常用要返回的字段集合来定义投影,但也可以排除特定字段
+
+// 如下查询返回的用户文档只包含两个字段: username _id(_id 通常总是包含在返回结果中)
+>db.users.find({}, { username : 1 })
+
+// 排除掉地址和支付方式字段后返回
+>db.users.find({}, { addresses : 0 , payment_methods : 0 })
+
+// 返回前12条评论
+>db.products.find({}, { reviews : { $slice: 12 } })
+
+// 返回倒数5篇评论
+>db.products.find({}, { reviews : { $slice: -5 } })
+
+// 跳过头24篇评论，并限制返回12篇评论
+>db.products.find({}, { reviews : { $slice: [24, 12] } })
+
+!! $slice 并不会阻止返回其它字段。如果希望限制文档中的其它字段，必须显式的进行控制
+
+// 限制返回指定范围的评论，并且限制文档中的字段
+>db.products.find({}, { reviews : { $slice: [24, 12] } , 'reviews.rating' : 1 })
+
+排序
+----
+$natural		根据插入顺序进行排序
+所有的查询结果都能按照一个或者多个字段进行升序或降序排列
+在类似的组合排序里，顺序至关重要
+
+// 根据评分从高到低对评论排序
+>db.reviews.find({}).sort({ rating : -1 })
+
+// 先根据有用程度排序，随后再是评分
+>db.reviews.find({}).sort({ helpful_votes : -1 , rating : -1 })
+
+
+// ... $natural 操作符的示例
+
+skip() 和 limit()
+----
+在向skip传递很大的值时需要注意，执行这种查询会扫描和skip值等量的文档，性能不高。
+
+// 一个例子
+>db.docs.find({}).skip(100).limit(10).sort({ date : -1 })
+
+聚合
+------------------------
+
+max() 与 min()
+----
+
+distinct
+----
+
+group
+----
+
+map-reduce
+----
+
+
+
+
+
+

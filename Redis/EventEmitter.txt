@@ -1,0 +1,47 @@
+EventEmitter
+----------------
+Node提供了一个伪类EventEmitter，可以将其作为基类来创建自定义的"事件发射器"
+
+
+理解标准回调模式的局限，和事件发射器模式的适用场景
+----
+一般而言，当需要在请求的操作完成后重新获取控制权的时候就使用CPS(后继传递模式，即标准的回调模式)，当事件可能发生多次时使用事件发射器模式。
+
+
+理解事件类型
+----
+事件类型用一个字符串表示，不包含空格的小写单词组成。
+事件发射器没有提供内省机制来让你编程来判断事件发射器到底能发射哪些类型的事件。
+Node实现中有一个特例，即error事件，Node中的大多数事件发射器实现在程序发生错误时都会发射error事件。如果不监听这个error事件，当error事件发生时，事件发射器会向上抛出一个未捕获的异常，这句话的意思是你的程序挂掉了！一般而言，应该总是监听错误事件，并对其进行恰当的处理。
+
+
+API
+----
+.addLinstener() 和 .on()		为指定事件添加事件监听器。这两个等价，on只是addLinstener的简写方法。
+.once()		绑定一个只执行一次的事件监听器
+.removeEventListener()
+.removeAllEventListerer()
+
+// ...
+
+
+
+创建事件发射器
+----
+var util = require("util");
+var EventEmitter = require("events").EventEmitter;
+var MyClass = function() {
+}
+util.inherits(MyClass, EventEmitter); // util.inherits 建立了一条原型链
+
+发射事件和监听事件
+----
+MyClass.prototype.someMethod = function() {
+	this.emit('aEvent', "argument 1", "argument 2");
+};
+
+var my = new MyClass();
+myInstance.on('aEvent', function(str1, str2) {
+	console.log('get a custom event with str1 %s and str2 %s !', str1, str2);
+});
+

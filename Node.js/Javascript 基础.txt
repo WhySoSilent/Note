@@ -1,0 +1,78 @@
+Javascript 基础
+-------------------------
+
+类型
+----
+访问基本类型，访问的是其值
+访问复杂类型，访问的是其引用
+
+基本类型:	number boolean string null undefined
+复杂类型:	array function object
+
+类型的困惑
+----
+js中准确无误的判断变量值的类型并非易事
+
+表达式中会被判定为false的特定值: null undefined '' 0
+
+函数
+----
+
+
+THIS CALL APPLY
+----
+call 接受参数列表(Canshu),apply接受参数数组(array)
+
+
+函数的参数数量
+----
+var f = function (a, b, c);
+a.length == 3;	// true
+
+
+闭包
+----
+在Javascript中，每次函数调用时，新的作用域就会产生.
+在某个作用域中定义的变量，只能在该作用域中或其内部作用域中才能访问到。
+
+类
+----
+Javascript中类只能通过函数来定义
+要给所有类(定义好的一个函数)的实例定义函数(方法)，可以通过prototype属性来完成
+!! 值得一提的是，prototype函数内部，this(执行的时候)并非像普通函数那样指向global对象，而是指向通过该类创建的实例对象.
+
+继承
+----
+Javascript 有基于原型的继承的特点.
+通常你可以通过以下方式来模拟类继承
+
+// 定义一个要继承自Animal的构造器
+function Persion() {}
+
+// 定义继承链，要创建一个Animal对象
+Persion.prototype = new Animal();
+
+// 可以为所有Persion的实例定义属性或这方法
+Persion.prototype.type = '人';
+
+// 还可以通过prototype来重写和调用父类函数
+Persion.prototype.eat = function(food) {
+	Animal.prototype.eat.call(this, food);
+	// Persion 特有的逻辑写在这里
+}
+
+这项技术很赞，是同类方案中最好的，而且它不会破坏instanceof操作符的结果
+最大的不足是声明继承的时候创建的对象总要进行初始化一次。幸运的是，V8提供了更简洁的方案。
+
+
+try catch
+----
+try 、 catch 、 throw
+
+try {
+	// some dangerouse
+} catch (e) {
+	e instanceof Error;		// true
+}
+
+当函数抛出错误(throw new Error('bad!'))时，代码就停止运行了，就像return的行为一样，注意后面的代码没机会执行了。
