@@ -1,0 +1,24 @@
+一个文档节点的继承链 body为例
+----
+Object
+Node
+Element
+HTMLElement
+HTMLBodyElement
+body
+
+节点对象类型
+----
+NodeType节点的类型。 这些常量都是定义在 Node对象中的属性，如下对应关系
+
+1		ELEMENT_NODE						// <a> <p> <script>
+2		ATTRIBUTE_NODE					// class="abc"
+3		TEXT_NODE								// 由换行符与空白符构成的文本字符
+4		CDATA_SECTION_NODE
+9		DOUMENT_NODE 						// window.document
+.		DOCUMENT_FRAGMENT_NODE	// document.createDocumentFragment()
+.		DOCUMENT_TYPE_NODE			// <!DOCTYPE html>
+.
+for (var key in Node) {
+	console.log(key, ' = ' + Node[key]);
+}

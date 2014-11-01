@@ -1,0 +1,25 @@
+事件绑定
+-------------
+所有Backbone对象都实现了Backbone.Events,它们中一些还提供了可被用户创建的对象监听的内置事件
+
+将Backbone.Events混入到你定义的对象中
+----
+var MyEventObj = _.extend({}, Backbone.Events);	//继承
+MyEventObj.on('_e1_', function(){});							//绑定事件回调函数
+MyEventObj.once('_e2_', function(){});						//绑定执行一次就解绑的事件回调函数
+MyEventObj.trigger('_e1_', 'a argument');					//触发这个事件
+
+需要定义大量不同事件的情况下，常规的做法是使用冒号来为它们命名：'poll:start' 'change:selection'
+
+取消回调函数的绑定
+----
+MyEventObj.off('_e1_', callback);				//取消绑定
+MyEventObj.off('_e1_');									//省略第二参数从该事件上移除所有回调
+MyEventObj.off(null, callback);					//省略第一参数从所有事件上移除特定回调
+MyEventObj.off();												//从所有事件移除所有回调不解释
+
+监听其它对象上的事件
+----
+MyEventObj2.listenTo(MyEventObj1, '_e1_', function(){});
+MyEventObj2.stopListening(MyEventObj1);					//停止跟踪MyEventObj1对象的所有事件
+MyEventObj2.stopListening();										//不带参数移除对所有对象的监听

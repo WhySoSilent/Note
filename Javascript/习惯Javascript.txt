@@ -1,0 +1,90 @@
+习惯Javascript
+-------------------
+
+
+javascript浮点数
+----
+所有数字都是双精度浮点数
+对浮点数保持时刻警惕，因为它们出了名的不精确
+位运算符将数字视为32位的有符号整数(做转换) 	~ & ^ | << >> >>>
+
+浮点数权衡了精度和性能。当我们关心精度时，要小心浮点数的局限性。一个有效的解决办法是尽可能地采用整数值运算
+
+隐式转换的坑
+----
+1. 结果为null的变量在算术运算中不会导致失败，而是被隐式转换为0；
+2. 一个未定义的变量将被转换为特殊的浮点数值 NaN (自相矛盾的命名为 not a number )
+
+! 这些强制转换不是立即抛出一个异常，而是继续运算下去，不可预测的结果由此而来
+
+对象也可以被隐式转换为原始值（String 或者 Number，分别依赖于其自身的 toString 或者 valueOf 方法 ）
+"J" + { toString: function() { return "S"; } }		// "JS"
+2 * { valueOf: function() { return 3; } }					// 6
+
+
+检测NaN的坑
+----
+无奈的是即便是测试NaN值也是异常困难，两个原因：
+1. Javascript遵循了IEEE浮点数标准令人头痛的要求 -- NaN 不等于其本身
+2. 标准的函数库isNaN也不是很可靠，因为它带有自己的隐式强制转换
+
+因此，测试一个值是否等于NaN行不通
+var x = NaN;
+x === NaN;	// false
+
+对于isNaN，仅在你确定一个值是数字的情况下，才用isNaN检测它是否是NaN,既它居然连非数字都先转为NaN
+isNaN(NaN);		//true
+对于其他绝不是NaN，但会被强制转换为NaN的值，使用isNaN方法是无法区分的
+isNaN("foo");			// true
+isNaN(undefined);	// true
+isNaN({});				// true
+
+一个既简单又可靠地测试NaN的习惯：你可以随时通过检查一个值是否等于其自身的方式来测试该值是否是NaN，抽象如下
+function isReallyNaN(x) {
+	return x !== x;
+}
+
+原始类型优于封装对象
+----
+标准库提供了构造函数来封装Boolean、Number、String作为对象
+
+某些方面来说，String对象的行为与其封装的字符串值类似，但不同与原始字符串的是，String对象是一个真正的对象
+var s = 'hello';
+var o = new String('hello');
+typeof s;		//'string'
+typeof o;		//'object'
+
+这一重要区别意味着，你不能使用操作符比较两个截然不同的String对象的内容
+var s1 = new String('hello');
+var s2 = new String('hello');
+s1 === s2;		//false
+s1 == s2;			//false
+
+由于这些封装的行为并不十分正确，所以用处不大，其存在的主要理由是它们提供的实用的方法:
+这里存在隐式强制装换，Javascript使得我们在直接对原始值提取属性和方法调用时，表现的就像已经使用了封装过的对象一样。 
+这种隐式转换奇怪的后果是，你可以对原始值设置属性，但记住这丝毫没有影响,因为每次隐式封装都产生一个新的String对象。事实证明这是Javascript隐藏类型错误的又一种情形。
+"hello".someProperty = 17;
+"hello".someProperty;		//undefined
+
+避免对混合类型使用 == 运算符
+----
+当两个参数同属于一个类型，== 和 === 运算符的行为是没有区别的，这种情况下最好使用严格相等运算符，这样代码会很清晰
+
+
+视字符串为16位的代码单元序列
+----
+一个UTF-16编码的演示
+	|------- code point --------|
+
+				'&'													''						'c'					'l'				'e'
+	|		0xd834		|		0xddle		|		0x0020		|		0x0063		|	0x006c	|	0x0065	|
+
+	|_ code unit _|
+
+
+Unicode 最初的UCS-2标准，每个字符由16位code unit表示。许多平台如java、javascript都采用16位编码的字符串。
+但当Unicode扩大规模时，Javascript已经采用了16位字符串元素。字符串属性和方法(如：length charAt charCodeAt)都是基于code unit层级，而不是code point层级。类似的，正则表达式也工作于code unit层级。
+这种情况意味着，应用程序同Unicode的整个范围一起工作必须更加仔细。不能信任字符串方法、长度值、索引查找或者许多正则表达式模式。
+如果你使用除BMP之外的代码点，那么求助于一些支持代码点的库是个好主意。正确获取编码和解码的细节是相当棘手的，所以最好使用一个现存的库，而不是自己实现这些逻辑。
+
+
