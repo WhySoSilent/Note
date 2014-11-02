@@ -1,0 +1,60 @@
+Backbone.Model
+---------------
+通过继承定义之，而后new之
+模型所有的属性被存放在对象的attributes属性中。初始化的时候，defautls中定义的值会被一一赋给attributes属性中定义的相关属性。
+
+复制模型
+----
+newModel = aModel.clone();
+
+设置默认属性值
+----
+创建的时候提供在defaults中
+
+多行表达式来设置默认值
+----
+提供一个函数会在初始化的时候调用
+var model = Backbone.Model.extend({
+	defaults: {
+		date: function() {
+			var date = new Date();
+			return date.toISOString();
+		}
+	}
+});
+
+模型属性操作
+----
+get('name')
+set('age', 25);	set({ age: 25, sex: 'man'});
+unset('name');		//从模型中删除一个属性
+clear();					//删除所有属性
+has('name');			//检查是否存在某一属性
+escape('name');		//获得该属性转以后的字符
+
+模型标识符(id)的操作
+----
+当模型创建时，需要手动为其赋值，否则其标识符为空
+默认情况下这个属性名为id，可以通过设置idAttribute来改变.
+var Model = Backbone.Model.extend({
+	idAttribute: "_id"
+});
+
+如果模型中的id属性还没有被初始化，你也可以使用客户端标识符cid，其值是诸如c0、c1、c2这类的形式
+
+模型属性的验证
+----
+通过定义validate属性，提供一个函数来进行属性验证，Backbone会传递attrs参数，其中包含了变化了的属性值。如果有不合法的值，应返回一条错误信息。
+var Model = new Backbone.Model.extend({
+	validate: function(attrs) {
+		if( attrs.quantity <= 0 )
+			return "can't ...";
+	}
+});
+
+属性验证仅在save()方法被调用前被触发。或者在传入{validate:true}的set()方法调用后。失败的验证会触发invalid事件，导致save()方法停止执行。
+model.on("invalid", function(model, error) {
+	//
+});
+
+
