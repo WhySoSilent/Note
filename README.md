@@ -4,13 +4,13 @@
 
 目录
 --------
-	*Javascript
-	*Node.js
-	*MongoDB
-	*Git
-	*Backbone
-	*Angular
-	*DOM
-	*Redis
-	*Swift
-	*PM
+* Javascript
+* Node.js
+* MongoDB
+* Git
+* Backbone
+* Angular
+* DOM
+* Redis
+* Swift
+* PM
