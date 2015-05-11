@@ -1,0 +1,18 @@
+Backbone.Model 扩展插件
+----
+
+Backbone.Memento
+管理模型的状态，通过备忘录模式保存或恢复模型的状态
+
+workflow.js
+模型中工作流的实现
+
+Backbone.Validation
+高级验证方式
+
+Backbone-Nested
+对嵌套属性的支持
+
+Backbone-relational
+定义模型间的关系
+

@@ -1,0 +1,10 @@
+类型
+====
+
+BOOL
+----
+
+C拥有 bool 类型的 true 和 false
+OC有 BOOL 类型的 YES 和 NO
+通过#define 命令把 YES 定义为 1, NO 定义为 0
+注意: 不要把 BOOL 值和 YES NO 直接进行比较
